@@ -1,4 +1,5 @@
 @echo off
+cd /d C:\xampp\htdocs\SMS
 echo ================================
 echo   SMS - First Setup
 echo ================================
