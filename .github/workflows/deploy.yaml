@@ -3,7 +3,7 @@ name: SMS CI/CD
 on:
   push:
     branches:
-      - Main   # Change to Main only if your branch is actually named Main
+      - Main   
 
 jobs:
   build:

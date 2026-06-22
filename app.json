@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SMS",
-    "slug": "SMS",
+    "slug": "sms",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
