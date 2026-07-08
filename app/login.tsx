@@ -1,4 +1,4 @@
-// react
+// react native
 import {
   View,
   Text,
