@@ -1,25 +1,27 @@
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useEffect } from "react";
-import { useRouter } from "expo-router";
-import { useAuth } from "../context/authContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { View, ActivityIndicator } from "react-native";
 
 export default function Logout() {
-  const router = useRouter();
-  const { logout } = useAuth();
-
   useEffect(() => {
+    const logout = async () => {
+      await AsyncStorage.removeItem("student");
+      router.replace("/login");
+    };
+
     logout();
-    router.replace("/login");
-  }, [logout, router]);
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#0000ff" />
-      <Text>Logging out...</Text>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <ActivityIndicator size="large" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
-});

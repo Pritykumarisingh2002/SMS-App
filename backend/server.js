@@ -1,168 +1,160 @@
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MySQL Connection
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
 
-// Connect Database
-db.connect((err) => {
-  if (err) {
-    console.log("Database Connection Error:", err);
-  } else {
-    console.log("MySQL Connected Successfully");
-  }
-});
+app.post("/student-login", (req, res) => {
+  const { admno, m_phone } = req.body;
 
-
-// ================= LOGIN API =================
-
-app.post("/login", (req, res) => {
-
-  const { admno, password } = req.body;
-
-  // Validation
-  if (!admno || !password) {
-    return res.status(400).json({
+  if (!admno || !m_phone) {
+    return res.json({
       success: false,
-      message: "Admission number and password are required",
+      message: "Admission No and Mobile No required",
     });
   }
 
   const sql = `
-    SELECT 
-      studid,
-      admno,
-      name,
-      m_phone
-    FROM studmast
+    select studmast.admno,studmast.name,studmast.section,studmast.m_phone,studmast.dob,clmast.CLCAPTION from studmast left join clmast on studmast.clcode=clmast.clcode
     WHERE admno = ?
+    AND m_phone = ?
+    LIMIT 1
   `;
 
-  db.query(sql, [admno], (err, result) => {
-
-    // Database Error
+  db.query(sql, [admno, m_phone], (err, result) => {
     if (err) {
       console.log(err);
 
       return res.status(500).json({
         success: false,
-        message: "Database error",
-        error: err,
+        message: "Database Error",
       });
     }
 
-    // Student Not Found
     if (result.length === 0) {
       return res.json({
         success: false,
-        message: "Invalid Admission Number",
+        message: "Invalid Admission No or Mobile No",
       });
     }
 
-    const student = result[0];
-
-    // Password Check
-    // Mobile number is used as password
-    if (student.m_phone != password) {
-      return res.json({
-        success: false,
-        message: "Invalid Password",
-      });
-    }
-
-    // Generate JWT Token
-    const token = jwt.sign(
-      {
-        studid: student.studid,
-        admno: student.admno,
-        name: student.name,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // Success Response
     res.json({
       success: true,
-      message: "Login Successful",
-      token,
-      student: {
-        studid: student.studid,
-        admno: student.admno,
-        name: student.name,
-      },
+      student: result[0],
     });
-
   });
-
 });
 
+app.get("/student-fee", async (req, res) => {
+  try {
+    const admno = req.query.admno;
 
-// ================= PROFILE API =================
+    const [student] = await db.promise().query(
+      `
+      SELECT
+        studid,
+        admno,
+        clcode,
+        fee_prof_code,
+        doa,
+        noterms
+      FROM studmast
+      WHERE admno = ?
+      `,
+      [admno]
+    );
 
-app.get("/profile", (req, res) => {
+    if (student.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
 
-  const authHeader = req.headers.authorization;
+    const s = student[0];
 
-  // No Token
-  if (!authHeader) {
-    return res.status(401).json({
+    const terms = 1;
+
+    let filter = "";
+
+    if (s.noterms > 0) {
+      filter = " AND AC_MODE='T'";
+    } else if (s.noterms === 0) {
+      filter = " AND AC_MODE<>'I'";
+    }
+
+    if (
+      s.noterms < 1 &&
+      (s.clcode === 1 || s.clcode === 2)
+    ) {
+      filter +=
+        " OR (f.AC_NO=9 AND FEE_PROF_CODE=1)";
+    }
+
+    const [fees] = await db.promise().query(
+      `
+      SELECT
+          f.AC_NO,
+          a.AC_NAME,
+          IF(AC_MODE='T', fee * ?, fee) AS fee
+      FROM fee_matrix f
+      INNER JOIN ac_master a
+          ON f.AC_NO = a.AC_NO
+      WHERE FEE_PROF_CODE = ?
+      AND a.AC_MANDATORY = 1
+      ${filter}
+      `,
+      [terms, s.fee_prof_code]
+    );
+
+    const [adhoc] = await db.promise().query(
+      `
+      SELECT
+          f.AC_NO,
+          a.AC_NAME,
+          amount AS fee
+      FROM adhocfee f
+      INNER JOIN ac_master a
+          ON f.AC_NO = a.AC_NO
+      WHERE studid = ?
+      AND paid = 0
+      `,
+      [s.studid]
+    );
+
+    const allFees = [...fees, ...adhoc];
+
+    const totalFee = allFees.reduce(
+      (sum, item) => sum + Number(item.fee),
+      0
+    );
+
+    res.json({
+      success: true,
+      student: s,
+      fees: allFees,
+      totalFee,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
       success: false,
-      message: "No token provided",
+      message: err.message,
     });
   }
-
-  const token = authHeader.split(" ")[1];
-
-  // Verify Token
-  jwt.verify(
-    token,
-    process.env.JWT_SECRET,
-    (err, decoded) => {
-
-      if (err) {
-        return res.status(401).json({
-          success: false,
-          message: "Invalid token",
-        });
-      }
-
-      res.json({
-        success: true,
-        student: decoded,
-      });
-
-    }
-  );
-
 });
 
-
-// ================= DEFAULT ROUTE =================
-
-app.get("/", (req, res) => {
-  res.send("Server Running Successfully");
-});
-
-
-// ================= START SERVER =================
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
