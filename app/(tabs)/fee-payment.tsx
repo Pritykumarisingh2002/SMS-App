@@ -13,7 +13,7 @@ import Checkbox from "expo-checkbox";
 
 import Header from "../../components/header";
 // import Sidebar from "../../components/sidebar";
-import TransactionTable from "../../components/transactionTable";
+// import TransactionTable from "../../components/transactionTable";
 
 interface FeeItem {
   AC_NO: number;
@@ -51,13 +51,8 @@ export default function FeePayment() {
     fee: number;
   }
 
-  const monthlyFee =
-    feeData.length > 0
-      ? Number((feeData[0] as any).fee)
-      : 0;
-
   const selectedFee =
-    selectedMonths.length * monthlyFee;
+    selectedMonths.length * totalFee;
 
   useEffect(() => {
     getFee();
@@ -262,27 +257,29 @@ export default function FeePayment() {
                   </View>
                 </View>
 
-                {feeData.length === 0 ? (
-                  <Text>Loading Fees...</Text>
-                ) : (
-                  feeData.map((item) => (
-                    <View
-                      key={item.AC_NO}
-                      style={styles.tableRow}
-                    >
-                      <Text>{item.AC_NAME}</Text>
-                      <Text>₹{item.fee}</Text>
-                    </View>
-                  ))
-                )}
+               {selectedMonths.length === 0 ? (
+  <Text>Select month(s) to view fees</Text>
+) : (
+  feeData.map((item) => (
+    <View
+      key={item.AC_NO}
+      style={styles.tableRow}
+    >
+      <Text>{item.AC_NAME}</Text>
+      <Text>
+        ₹{Number(item.fee) * selectedMonths.length}
+      </Text>
+    </View>
+  ))
+)}
 
                 <View style={styles.tableRow}>
                   <Text style={styles.totalText}>
                     Total Fee Structure
                   </Text>
                   <Text style={styles.totalText}>
-                    ₹{totalFee}
-                  </Text>
+  ₹{totalFee * selectedMonths.length}
+</Text>
                 </View>
               </View>
             </View>
@@ -308,10 +305,10 @@ export default function FeePayment() {
                   </Text>
                 </View>
 
-                <View style={styles.tableRow}>
+                {/* <View style={styles.tableRow}>
                   <Text>Tuition Fees</Text>
                   <Text>₹{selectedFee}</Text>
-                </View>
+                </View> */}
 
                 <View style={styles.tableRow}>
                   <Text style={styles.totalText}>
@@ -348,7 +345,7 @@ export default function FeePayment() {
           </View> */}
 
           {/* Transaction History */}
-          <TransactionTable />
+          {/* <TransactionTable /> */}
         </ScrollView>
       </View>
     </View>
@@ -411,6 +408,7 @@ const styles = StyleSheet.create({
 
   cardBody: {
     padding: 15,
+    marginBottom: 8,
   },
 
   monthGrid: {
@@ -439,6 +437,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 8,
     flexWrap: "wrap",
+    marginBottom: 8,
   },
 
   tableHeading: {

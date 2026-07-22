@@ -56,6 +56,22 @@ export default function Layout() {
         }}
       />
 
+      
+
+      <Tabs.Screen
+        name="transaction-history"
+        options={{
+          title: "Transaction",
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5
+              name="receipt"
+              size={size - 2}
+              color={color}
+            />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="index"
         options={{

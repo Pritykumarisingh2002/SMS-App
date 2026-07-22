@@ -14,7 +14,10 @@ import {
 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import { Calendar } from "react-native-calendars";
+import axios from "axios";
 
+const [markedDates, setMarkedDates] = useState({});
 const screenWidth = Dimensions.get("window").width;
 export default function Dashboard() {
   const [profileVisible, setProfileVisible] = useState(false);
@@ -36,6 +39,33 @@ export default function Dashboard() {
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    fetchHolidays();
+  }, []);
+
+  const fetchHolidays = async () => {
+    try {
+      const response = await axios.get(
+        "http://192.168.1.6:5000/holidays",
+      );
+      
+
+      const marks: any = {};
+
+      response.data.holidays.forEach((holiday: any) => {
+        marks[holiday.holiday_date] = {
+          selected: true,
+          selectedColor: "#f39c12",
+        };
+      });
+
+      setMarkedDates(marks);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
 
@@ -105,54 +135,54 @@ export default function Dashboard() {
         </View>
 
         {/* Cards */}
-<View style={styles.studentCard}>
-  <Text style={styles.studentTitle}>
-    Student Details
-  </Text>
+        <View style={styles.studentCard}>
+          <Text style={styles.studentTitle}>
+            Student Details
+          </Text>
 
-  <View style={styles.studentBody}>
-    <Text>Name : {student.name}</Text>
-    <Text>Class : {student.CLCAPTION}</Text>
-    <Text>Section : {student.section}</Text>
-    <Text>Adm No : {student.admno}</Text>
-    <Text>Mobile : {student.m_phone}</Text>
-  </View>
-</View>
+          <View style={styles.studentBody}>
+            <Text>Name : {student.name}</Text>
+            <Text>Class : {student.CLCAPTION}</Text>
+            <Text>Section : {student.section}</Text>
+            <Text>Adm No : {student.admno}</Text>
+            <Text>Mobile : {student.m_phone}</Text>
+          </View>
+        </View>
 
-<View style={styles.statsRow}>
-  <View style={styles.feeCard}>
-    <FontAwesome5
-      name="rupee-sign"
-      size={40}
-      color="rgba(255,255,255,0.3)"
-    />
+        <View style={styles.statsRow}>
+          <View style={styles.feeCard}>
+            <FontAwesome5
+              name="rupee-sign"
+              size={40}
+              color="rgba(255,255,255,0.3)"
+            />
 
-    <Text style={styles.bigNumber}>₹0</Text>
+            <Text style={styles.bigNumber}>₹0</Text>
 
-    <Text style={styles.cardText}>
-      Pending Fees
-    </Text>
-  </View>
+            <Text style={styles.cardText}>
+              Pending Fees
+            </Text>
+          </View>
 
-  <View style={styles.attendanceCard}>
-    <Ionicons
-      name="stats-chart"
-      size={45}
-      color="rgba(255,255,255,0.3)"
-    />
+          <View style={styles.attendanceCard}>
+            <Ionicons
+              name="stats-chart"
+              size={45}
+              color="rgba(255,255,255,0.3)"
+            />
 
-    <Text style={styles.bigNumber}>
-      100%
-    </Text>
+            <Text style={styles.bigNumber}>
+              100%
+            </Text>
 
-    <Text style={styles.cardText}>
-      Attendance
-    </Text>
-  </View>
-</View>
+            <Text style={styles.cardText}>
+              Attendance
+            </Text>
+          </View>
+        </View>
 
         {/* Calendar */}
-        <View style={styles.calendarCard}>
+        {/* <View style={styles.calendarCard}>
           <View style={styles.calendarHeader}>
             <Ionicons
               name="calendar-outline"
@@ -192,6 +222,9 @@ export default function Dashboard() {
               • Christmas - 25 Dec
             </Text>
           </View>
+        </View> */}
+        <View style={styles.calendarBody}>
+          <Calendar markedDates={markedDates} />
         </View>
       </ScrollView>
 
@@ -301,10 +334,10 @@ const styles = StyleSheet.create({
   },
 
   statsRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  marginBottom: 20,
-},
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
 
   studentCard: {
     // flex: 1,
@@ -331,7 +364,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     marginRight: 6,
-  minHeight: 130,
+    minHeight: 130,
   },
 
   attendanceCard: {
@@ -340,7 +373,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     marginLeft: 6,
-  minHeight: 130,
+    minHeight: 130,
   },
 
   bigNumber: {

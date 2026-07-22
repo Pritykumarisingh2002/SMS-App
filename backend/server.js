@@ -155,6 +155,103 @@ app.get("/student-fee", async (req, res) => {
   }
 });
 
+app.get("/transaction-history", async (req, res) => {
+  try {
+    const { admno } = req.query;
+
+    if (!admno) {
+      return res.status(400).json({
+        success: false,
+        message: "Admission number required",
+      });
+    }
+
+    const [studentRows] = await db.promise().query(
+      `
+      SELECT studid
+      FROM studmast
+      WHERE admno = ?
+      `,
+      [admno]
+    );
+
+    if (studentRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
+
+    const studid = studentRows[0].studid;
+
+    const [rows] = await db.promise().query(
+      `
+      SELECT
+        f.mr_no,
+        f.mr_date,
+        f.noterm,
+        f.term,
+        f.fee_amt,
+        f.chq_no,
+        fd.AC_AMTPAID,
+        am.AC_NAME
+      FROM fee f
+      INNER JOIN fee_detail fd
+        ON f.mr_no = fd.mr_no
+      INNER JOIN ac_master am
+        ON fd.AC_NO = am.AC_NO
+      WHERE f.studid = ?
+      ORDER BY f.mr_date DESC
+      `,
+      [studid]
+    );
+
+    const grouped = {};
+
+    rows.forEach((row) => {
+      if (!grouped[row.mr_no]) {
+        grouped[row.mr_no] = {
+          receiptNo: row.mr_no,
+          date: row.mr_date,
+          amount: Number(row.fee_amt),
+          transactionId: row.chq_no,
+          term: row.term,
+          noterm: row.noterm,
+          feeHeads: [],
+        };
+      }
+
+      grouped[row.mr_no].feeHeads.push({
+        head: row.AC_NAME,
+        amount: Number(row.AC_AMTPAID),
+      });
+    });
+
+    res.json({
+      success: true,
+      transactions: Object.values(grouped),
+    });
+  } catch (error) {
+    console.error("Transaction History Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+app.get("/holidays", async (req, res) => {
+  const [rows] = await pool.query(
+    "SELECT holiday_date, holiday_name FROM holidays"
+  );
+
+  res.json({
+    success: true,
+    holidays: rows,
+  });
+});
+
 app.listen(5000, () => {
   console.log("Server running on port 5000");
 });
